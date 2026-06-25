@@ -3091,16 +3091,6 @@ function lookupVerifiedScrewRef(
                                     Ref: {s.pNumber}
                                   </span>
                                 )}
-                                {s.hospitalNotes && (
-                                  <span className="text-rose-700 bg-rose-50 border border-rose-150 px-1.5 py-0.5 rounded font-extrabold animate-pulse text-[10px]" title={s.hospitalNotes}>
-                                    ⚠️ Caution
-                                  </span>
-                                )}
-                                {s.source && (
-                                  <span className="text-[10px] text-slate-350">
-                                    • {s.source}
-                                  </span>
-                                )}
                               </div>
 
                               {/* Plate Search matches listing snippet */}
