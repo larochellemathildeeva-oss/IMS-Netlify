@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ------------------------------------------------------------------
+    // Default deny: anything not explicitly matched below is rejected.
+    // ------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-#]+$');
+    }
+
+    // ------------------------------------------------------------------
+    // SERVER-SIDE PHI REJECTION
+    // This layer holds even if the client app is bypassed, modified, or
+    // replaced. A write is rejected if any listed string field matches an
+    // unambiguous patient-identifier pattern. Mirrors a conservative
+    // subset of the client phiGuard patterns - the low-false-positive
+    // ones suitable for a hard server reject.
+    // ------------------------------------------------------------------
+    function strClean(v) {
+      return !(v is string) ||
+        (
+          !v.matches('.*[0-9]{7,}.*') &&
+          !v.matches('.*[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+[.][A-Za-z]{2,}.*') &&
+          !v.matches('.*[0-9]{3}[\\-\\s][0-9]{2,3}[\\-\\s][0-9]{3,4}.*') &&
+          !v.matches('.*[A-Za-z]{4}\\s?[0-9]{4}\\s?[0-9]{4}.*') &&
+          !v.matches('(?i).*(mrn|dossier|ramq|health\\s*card|date\\s*of\\s*birth|dob).*') &&
+          !v.matches('.*(19|20)[0-9]{2}[\\-/.][0-9]{1,2}[\\-/.][0-9]{1,2}.*')
+        );
+    }
+
+    function fieldClean(data, field) {
+      return !(field in data) || strClean(data[field]);
+    }
+
+    match /archived_orders/{id} {
+      allow read: if true;
+      allow write: if isValidId(id)
+        && fieldClean(request.resource.data, 'id')
+        && fieldClean(request.resource.data, 'status');
+    }
+
+    match /flagged_issues/{id} {
+      allow read: if true;
+      allow write: if isValidId(id)
+        && fieldClean(request.resource.data, 'description')
+        && fieldClean(request.resource.data, 'reporter')
+        && fieldClean(request.resource.data, 'contact')
+        && fieldClean(request.resource.data, 'setName')
+        && fieldClean(request.resource.data, 'resolutionNotes');
+    }
+
+    match /custom_locations/{setId} {
+      allow read: if true;
+      allow write: if isValidId(setId)
+        && fieldClean(request.resource.data, 'location');
+    }
+
+    match /onsite_sets/{setId} {
+      allow read: if true;
+      allow write: if isValidId(setId);
+    }
+
+    match /set_verifications/{setId} {
+      allow read: if true;
+      allow write: if isValidId(setId)
+        && fieldClean(request.resource.data, 'verifiedBy');
+    }
+  }
+}

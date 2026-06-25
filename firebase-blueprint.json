@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "ArchivedOrder": {
+      "title": "ArchivedOrder",
+      "description": "Replenishment or reorder requisition that has been finalized.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "items": { "type": "array" },
+        "alertSent": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["Stored", "Processed", "Dispatched"] }
+      },
+      "required": ["id", "timestamp", "items", "alertSent", "status"]
+    },
+    "FlaggedIssue": {
+      "title": "FlaggedIssue",
+      "description": "Clinical implant issue reported by clinical staff.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "setName": { "type": "string" },
+        "severity": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "description": { "type": "string" },
+        "reporter": { "type": "string" },
+        "contact": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Resolved"] },
+        "resolutionNotes": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "setName", "severity", "description", "reporter", "status"]
+    },
+    "CustomLocation": {
+      "title": "CustomLocation",
+      "description": "Custom physical storage location assigned to a surgical set.",
+      "type": "object",
+      "properties": {
+        "setId": { "type": "string" },
+        "location": { "type": "string" }
+      },
+      "required": ["setId", "location"]
+    },
+    "OnSiteSetState": {
+      "title": "OnSiteSetState",
+      "description": "Clinical set on-site availability presence toggle status.",
+      "type": "object",
+      "properties": {
+        "setId": { "type": "string" },
+        "isOnSite": { "type": "boolean" }
+      },
+      "required": ["setId", "isOnSite"]
+    },
+    "SetVerification": {
+      "title": "SetVerification",
+      "description": "Verification statuses for various screws and plates within a surgical tray set.",
+      "type": "object",
+      "properties": {
+        "items": { "type": "object" }
+      },
+      "required": ["items"]
+    }
+  },
+  "firestore": {
+    "/archived_orders/{id}": {
+      "schema": { "$ref": "ArchivedOrder" },
+      "description": "Archived clinical orders and replenishment requisitions."
+    },
+    "/flagged_issues/{id}": {
+      "schema": { "$ref": "FlaggedIssue" },
+      "description": "System issues, physical damage reports, or out-of-stock items flagged."
+    },
+    "/custom_locations/{setId}": {
+      "schema": { "$ref": "CustomLocation" },
+      "description": "Synchronized physical shelving locations by set ID."
+    },
+    "/onsite_sets/{setId}": {
+      "schema": { "$ref": "OnSiteSetState" },
+      "description": "On-site presence statuses for sets, indicating local vault availability."
+    },
+    "/set_verifications/{setId}": {
+      "schema": { "$ref": "SetVerification" },
+      "description": "Verification status records for individual implants or sets."
+    }
+  }
+}

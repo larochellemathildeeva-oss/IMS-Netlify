@@ -1,0 +1,37 @@
+# Netlify configuration for ML² Orthopedic Implant Inventory.
+# Ported from firebase.json - same security headers, same single-page-app
+# rewrite behavior, just in Netlify's config format instead of Firebase's.
+
+[build]
+  # Netlify runs this command itself on its own servers - nothing needs to
+  # be pre-built before pushing to GitHub.
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page-app routing: any path that isn't a real file (e.g. a deep link
+# someone bookmarked) falls back to index.html, so React Router-style
+# in-app navigation doesn't 404 on refresh. Equivalent to the "rewrites"
+# block in firebase.json.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers - identical set to firebase.json, applied to every route.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Permissions-Policy = "geolocation=(), camera=(), microphone=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com; frame-ancestors 'none';"
+    X-Robots-Tag = "noindex, nofollow"
+
+# index.html specifically should never be cached, so a redeploy is always
+# picked up immediately rather than served stale from a CDN edge cache.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
