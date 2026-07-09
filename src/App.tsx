@@ -22,6 +22,7 @@ import {
 } from "./data/decoratedSets";
 import { checkPhi, describeFindings, scrubObject, assertTransmitSafe } from "./data/phiGuard";
 import { DISPATCH_LABEL } from "./data/dispatchConfig";
+import { TRAY_INVENTORY, TrayItem } from "./data/trayInventory";
 import { VERIFICATION_REPORT_MD } from "./data/verificationReport";
 import { TraumaSet, Screw, ReorderItem, ArchivedOrder, FlaggedIssue, OutOfStockAlert, VerificationStatus } from "./types";
 import { Highlight } from "./components/Highlight";
@@ -68,6 +69,7 @@ import {
   Download,
   FileText,
   HelpCircle,
+  Package,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -699,6 +701,8 @@ export default function App() {
 
   // Representative Directory Modal states
   const [showRepsModal, setShowRepsModal] = useState(false);
+  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [equipmentSearch, setEquipmentSearch] = useState("");
   const [repSearchQuery, setRepSearchQuery] = useState("");
   const [copiedRepField, setCopiedRepField] = useState<string | null>(null);
   const [repViewMode, setRepViewMode] = useState<"cards" | "table">("cards");
@@ -2153,6 +2157,16 @@ function lookupVerifiedScrewRef(
               <span className="hidden xs:inline">Vendor Reps</span>
               <span className="xs:hidden">Reps</span>
             </button>
+
+            <button
+              onClick={() => { setEquipmentSearch(""); setShowEquipmentModal(true); }}
+              className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 hover:text-slate-955 bg-slate-100 hover:bg-slate-200/80 rounded-xl border border-slate-205 cursor-pointer select-none transition shadow-2xs hover:shadow-xs"
+              id="btn-open-equipment-modal"
+              title="Equipment & Tray Lookup"
+            >
+              <Package size={13} className="text-slate-500" />
+              <span>Equipment</span>
+            </button>
             <button
               onClick={() => { setOrderSubmittedId(""); setShowReorderModal(true); }}
               className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-850 hover:text-teal-955 bg-[#F4FAFD] hover:bg-[#E0F2FE]/80 rounded-xl border border-teal-200 cursor-pointer select-none transition shadow-2xs hover:shadow-xs"
@@ -3091,6 +3105,16 @@ function lookupVerifiedScrewRef(
                                     Ref: {s.pNumber}
                                   </span>
                                 )}
+                                {s.hospitalNotes && (
+                                  <span className="text-rose-700 bg-rose-50 border border-rose-150 px-1.5 py-0.5 rounded font-extrabold animate-pulse text-[10px]" title={s.hospitalNotes}>
+                                    ⚠️ Caution
+                                  </span>
+                                )}
+                                {s.source && (
+                                  <span className="text-[10px] text-slate-350">
+                                    • {s.source}
+                                  </span>
+                                )}
                               </div>
 
                               {/* Plate Search matches listing snippet */}
@@ -3367,6 +3391,139 @@ function lookupVerifiedScrewRef(
           Archive popup (id="secure-archive-vault-modal"). Any locked edit
           attempt now opens that modal directly (setShowAdminModal(true))
           instead of a separate floating password prompt. */}
+
+      {/* Equipment & Tray Lookup modal */}
+      {showEquipmentModal && (
+        <AnimatePresence>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.18 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <Package size={18} className="text-slate-600" />
+                  <div>
+                    <h2 className="font-bold text-slate-900 text-base">Equipment & Tray Lookup</h2>
+                    <p className="text-[11px] text-slate-400 font-medium">GLEN OR · {TRAY_INVENTORY.length} items</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEquipmentModal(false)}
+                  className="p-2 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                >
+                  <X size={16} className="text-slate-500" />
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="px-5 py-3 border-b border-slate-100 shrink-0">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    autoFocus
+                    value={equipmentSearch}
+                    onChange={(e) => setEquipmentSearch(e.target.value)}
+                    placeholder="Search by tray name or P-number..."
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-teal-400 focus:bg-white transition"
+                  />
+                  {equipmentSearch && (
+                    <button
+                      onClick={() => setEquipmentSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Results */}
+              <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
+                {(() => {
+                  const q = equipmentSearch.trim().toLowerCase();
+                  const results = q.length < 1
+                    ? TRAY_INVENTORY
+                    : TRAY_INVENTORY.filter(t =>
+                        t.description.toLowerCase().includes(q) ||
+                        t.pNumber.toLowerCase().includes(q) ||
+                        t.position.toLowerCase().includes(q)
+                      );
+
+                  if (results.length === 0) {
+                    return (
+                      <div className="text-center py-10 text-slate-400">
+                        <Package size={28} className="mx-auto mb-2 opacity-40" />
+                        <p className="text-sm font-medium">No matching equipment found</p>
+                        <p className="text-xs mt-1">Try a different name or P-number</p>
+                      </div>
+                    );
+                  }
+
+                  return results.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-2xl px-4 py-3 transition"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-slate-900 leading-snug truncate">
+                          {item.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-[11px] font-mono text-slate-450 bg-white border border-slate-200 px-1.5 py-0.5 rounded">
+                            {item.pNumber}
+                          </span>
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                            item.area === "MDR"
+                              ? "bg-blue-50 text-blue-700 border border-blue-150"
+                              : item.area === "Sterile Core"
+                              ? "bg-teal-50 text-teal-700 border border-teal-150"
+                              : "bg-slate-100 text-slate-500 border border-slate-200"
+                          }`}>
+                            {item.area}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono font-semibold">
+                            📍 {item.position}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className={`text-lg font-extrabold ${
+                          item.quantity === 0 ? "text-rose-600" :
+                          item.quantity === 1 ? "text-amber-600" :
+                          "text-emerald-700"
+                        }`}>
+                          {item.quantity}
+                        </span>
+                        <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">in stock</p>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-2.5 border-t border-slate-100 shrink-0">
+                <p className="text-[10px] text-slate-400 text-center font-medium">
+                  {equipmentSearch
+                    ? `${TRAY_INVENTORY.filter(t =>
+                        t.description.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+                        t.pNumber.toLowerCase().includes(equipmentSearch.toLowerCase())
+                      ).length} result(s) · `
+                    : `${TRAY_INVENTORY.length} items · `}
+                  MDR = <span className="text-blue-600 font-bold">blue</span> ·
+                  Sterile Core = <span className="text-teal-600 font-bold">teal</span>
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </AnimatePresence>
+      )}
 
       {/* Help & FAQ modal - static reference content, no data dependency,
           describing what each real button/feature in the app actually
